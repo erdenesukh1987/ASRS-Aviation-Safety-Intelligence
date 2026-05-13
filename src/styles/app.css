@@ -99,6 +99,28 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .topbar-subtitle { margin: 5px 0 0; }
 .eyebrow { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 0.13em; font-size: 0.74rem; }
 .actions { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+.data-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--muted);
+}
+.data-banner span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: var(--panel-2);
+}
+.data-banner.warning {
+  border-color: rgba(243, 193, 75, 0.45);
+  color: #facc15;
+  background: rgba(243, 193, 75, 0.1);
+}
 
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
 .kpi, .chart-card, .map-panel, .detail-panel, .insights, .table-panel {

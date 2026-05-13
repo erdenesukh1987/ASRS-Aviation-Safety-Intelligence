@@ -12,6 +12,18 @@ async function getJson<T>(url: string): Promise<T> {
 
 export async function loadDashboardData() {
   try {
+    const incidents = await getJson<AsrsIncident[]>("/data/asrs_incidents.json");
+    return {
+      incidents,
+      filterOptions: buildFilterOptions(incidents),
+      dataSource: "NASA ASRS Historical Reports",
+      fallback: false
+    };
+  } catch {
+    // Static JSON is the deployment path. The local API remains a development fallback.
+  }
+
+  try {
     const [incidents, filters] = await Promise.all([
       getJson<AsrsIncident[]>("/api/asrs/incidents"),
       getJson<ApiFilterOptions>("/api/asrs/filters")

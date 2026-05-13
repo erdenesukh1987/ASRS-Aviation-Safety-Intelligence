@@ -146,6 +146,7 @@ The importer writes normalized datasets to:
 ```text
 data/processed/asrs_incidents.json
 server/data/asrs_incidents.json
+public/data/asrs_incidents.json
 ```
 
 Synthetic sample generation remains available only as a fallback/demo utility:
@@ -217,10 +218,20 @@ Recommended deployment model:
 - Connect the GitHub repository to Vercel.
 - Configure automatic redeploy on push.
 - Run the ingestion pipeline locally or in a trusted build workflow before deployment.
-- Host processed JSON as static assets or adapt the API layer to the deployment environment.
-- Use frontend-only deployment for public portfolio views when serverless API hosting is not required.
+- Commit the processed static dataset at `public/data/asrs_incidents.json`.
+- Use frontend-only deployment for public portfolio views; the deployed static site reads `/data/asrs_incidents.json` directly.
+- Keep the Express API for local development and richer local workflows.
 
-For static deployments, ensure the processed historical JSON dataset is available to the frontend build or hosted from a stable public path. Do not represent the deployed dashboard as operational monitoring or aircraft tracking.
+Deployment workflow:
+
+```bash
+npm run import:asrs
+git add public/data/asrs_incidents.json data/processed/asrs_incidents.json server/data/asrs_incidents.json
+git commit -m "update ASRS processed dataset"
+git push
+```
+
+Vercel automatically redeploys after the GitHub push. For static deployments, ensure the processed historical JSON dataset is available at `public/data/asrs_incidents.json`. Do not represent the deployed dashboard as operational monitoring or aircraft tracking.
 
 ## Disclaimer
 

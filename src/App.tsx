@@ -25,6 +25,7 @@ export function App() {
   const [incidents, setIncidents] = useState<AsrsIncident[]>([]);
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null);
   const [dataSource, setDataSource] = useState("NASA ASRS Historical Reports");
+  const [usingFallback, setUsingFallback] = useState(false);
   const [loading, setLoading] = useState(true);
   const [associatedIncidents, setAssociatedIncidents] = useState<AsrsIncident[]>([]);
 
@@ -35,6 +36,7 @@ export function App() {
       setIncidents(data.incidents);
       setFilterOptions(data.filterOptions);
       setDataSource(data.dataSource);
+      setUsingFallback(data.fallback);
       setLoading(false);
     });
     return () => {
@@ -73,8 +75,8 @@ export function App() {
         <header className="topbar">
           <div>
             <p className="eyebrow">Data Source: {dataSource}</p>
-            <h1>ASRS Incident Visualization Dashboard</h1>
-            <p className="muted topbar-subtitle">{loading ? "Loading historical reports..." : "Historical aviation safety intelligence dashboard."}</p>
+            <h1>ASRS Aviation Safety Intelligence Dashboard</h1>
+            <p className="muted topbar-subtitle">{loading ? "Loading historical ASRS reports..." : "Historical analysis of reported General Aviation safety events near non-towered and uncontrolled airport environments."}</p>
           </div>
           <div className="actions">
             <button onClick={() => setDark((value) => !value)} title="Toggle theme">
@@ -88,6 +90,18 @@ export function App() {
             </button>
           </div>
         </header>
+
+        {usingFallback ? (
+          <section className="data-banner warning">
+            Synthetic demo data is being shown because no processed ASRS dataset was found.
+          </section>
+        ) : (
+          <section className="data-banner">
+            <span>Data Source: NASA ASRS Historical Reports</span>
+            <span>Dataset Type: Voluntary self-reported historical safety narratives</span>
+            <span>Status: Historical / batch-updated, not real-time surveillance</span>
+          </section>
+        )}
 
         <KpiCards stats={stats} />
 

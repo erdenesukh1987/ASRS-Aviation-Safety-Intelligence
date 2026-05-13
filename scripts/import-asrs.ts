@@ -22,6 +22,7 @@ type AirportIndex = { byCode: Map<string, AirportRef[]>; airports: AirportRef[] 
 const rawPath = resolve("data/raw/ASRS_DBOnline.csv");
 const processedPath = resolve("data/processed/asrs_incidents.json");
 const serverPath = resolve("server/data/asrs_incidents.json");
+const publicPath = resolve("public/data/asrs_incidents.json");
 const airportReferencePath = resolve("data/reference/airports.csv");
 
 const stateCentroids: Record<string, { latitude: number; longitude: number; region: string }> = {
@@ -357,7 +358,8 @@ async function main() {
     mkdir(resolve("data/raw"), { recursive: true }),
     mkdir(resolve("data/processed"), { recursive: true }),
     mkdir(resolve("data/reference"), { recursive: true }),
-    mkdir(resolve("server/data"), { recursive: true })
+    mkdir(resolve("server/data"), { recursive: true }),
+    mkdir(resolve("public/data"), { recursive: true })
   ]);
 
   const rows = parseCsv(await readFile(rawPath, "utf8"));
@@ -433,10 +435,11 @@ async function main() {
   }).filter((incident) => incident.narrative || incident.eventType !== "ASRS event");
 
   const json = `${JSON.stringify(incidents, null, 2)}\n`;
-  await Promise.all([writeFile(processedPath, json), writeFile(serverPath, json)]);
+  await Promise.all([writeFile(processedPath, json), writeFile(serverPath, json), writeFile(publicPath, json)]);
   console.log(`Imported ${incidents.length.toLocaleString()} ASRS records from ${rawPath}`);
   console.log(`Wrote ${processedPath}`);
   console.log(`Wrote ${serverPath}`);
+  console.log(`Wrote ${publicPath}`);
 }
 
 await main();
