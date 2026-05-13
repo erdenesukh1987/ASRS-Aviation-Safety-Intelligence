@@ -15,12 +15,12 @@ export function ResearchInsights({ incidents }: { incidents: AsrsIncident[] }) {
         </div>
       </div>
       <div className="insight-grid">
-        <article><h3>Dominant risk patterns</h3>{insights.dominantRiskPatterns.map((item) => <p key={item}>{item}</p>)}</article>
-        <article><h3>Frequent categories</h3>{insights.frequentCategories.map((item) => <p key={item}>{item}</p>)}</article>
-        <article><h3>High-risk clusters</h3>{insights.highRiskClusters.map((item) => <p key={item}>{item}</p>)}</article>
+        <article><h3>Top recurring risks</h3>{insights.topRecurringRisks.map((item) => <p key={item}>{item}</p>)}</article>
+        <article><h3>Most common flight phases</h3>{insights.flightPhaseSummary.map((item) => <p key={item}>{item}</p>)}</article>
+        <article><h3>Top airport clusters</h3>{insights.highRiskClusters.map((item) => <p key={item}>{item}</p>)}</article>
         <article><h3>Trend signal</h3><p>{insights.trendsOverTime}</p></article>
-        <article><h3>Surveillance gaps</h3>{insights.surveillanceGaps.map((item) => <p key={item}>{item}</p>)}</article>
-        <article><h3>Paper 1 taxonomy candidates</h3>{insights.taxonomyCandidates.map((item) => <p key={item}>{item}</p>)}</article>
+        <article><h3>Communication events</h3><p>{insights.communicationEvents}</p><p>{insights.ctafEvents}</p></article>
+        <article><h3>Research taxonomy candidates</h3>{insights.taxonomyCandidates.map((item) => <p key={item}>{item}</p>)}</article>
       </div>
     </section>
   );

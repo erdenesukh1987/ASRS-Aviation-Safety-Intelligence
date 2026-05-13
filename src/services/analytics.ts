@@ -42,6 +42,8 @@ export function generateInsights(incidents: AsrsIncident[]) {
   const stats = computeStats(incidents);
   const clusters = countBy(incidents.filter((item) => item.severity_level === "high" || item.severity_level === "critical"), (item) => `${item.airport_code} (${item.state})`).slice(0, 4);
   const gaps = countBy(incidents.filter((item) => item.event_category === "Surveillance gap" || item.extracted_keywords.includes("ADS-B") || item.narrative.includes("shared traffic picture")), (item) => item.airport_type).slice(0, 3);
+  const communication = incidents.filter((item) => /communication|radio|frequency|atc|ctaf|unicom/i.test(`${item.event_category} ${item.narrative} ${item.contributing_factors.join(" ")}`));
+  const ctaf = incidents.filter((item) => /ctaf/i.test(`${item.narrative} ${item.extracted_keywords.join(" ")}`));
   const latest = [...stats.yearlyTrend].slice(-2);
   const trendText = latest.length === 2 && Number(latest[1].value) > Number(latest[0].value) ? "rising" : "stable to declining";
   return {
@@ -54,6 +56,11 @@ export function generateInsights(incidents: AsrsIncident[]) {
     highRiskClusters: clusters.map((item) => `${item.name}: ${item.value} high-risk reports`),
     trendsOverTime: `The filtered time series is ${trendText}, with the strongest recent yearly count at ${stats.yearlyTrend.at(-1)?.name ?? "n/a"}.`,
     surveillanceGaps: gaps.map((item) => `${item.name} airports show repeated traffic-picture or ADS-B/see-and-avoid limitations.`),
+    commonFlightPhases: stats.incidentDistribution.length ? stats.yearlyTrend.map((item) => `${item.name}: ${item.value} reports`) : [],
+    topRecurringRisks: stats.incidentDistribution.slice(0, 5).map((item) => `${item.name}: ${item.value} reports`),
+    flightPhaseSummary: stats.yearlyTrend.length ? countBy(incidents, (item) => item.flight_phase).slice(0, 5).map((item) => `${item.name}: ${item.value} reports`) : [],
+    communicationEvents: `${communication.length.toLocaleString()} filtered reports include communication, radio, ATC, CTAF, or UNICOM language.`,
+    ctafEvents: `${ctaf.length.toLocaleString()} filtered reports explicitly reference CTAF.`,
     taxonomyCandidates: [
       "CTAF phraseology and timing",
       "Non-standard pattern entry conflict",

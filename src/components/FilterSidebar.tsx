@@ -23,17 +23,19 @@ function SelectField({ name, value, options, onChange }: { name: string; value?:
 
 export function FilterSidebar({ filters, options, onChange }: Props) {
   const set = (patch: Partial<IncidentFilters>) => onChange({ ...filters, ...patch });
+  const minYear = options.years[0] ?? 2015;
+  const maxYear = options.years.at(-1) ?? 2025;
   return (
     <div className="filters">
       <div className="filter-header">
         <strong>Filters</strong>
-        <button onClick={() => onChange({ startYear: 2018, endYear: 2025, altitudeMin: 0, altitudeMax: 6000 })} title="Reset filters">
+        <button onClick={() => onChange({ startYear: minYear, endYear: maxYear, altitudeMin: 0, altitudeMax: 6000 })} title="Reset filters">
           <RotateCcw size={15} />
         </button>
       </div>
       <div className="range-row">
-        <label><span>Start year</span><input type="number" min="2018" max="2025" value={filters.startYear ?? 2018} onChange={(event) => set({ startYear: Number(event.target.value) })} /></label>
-        <label><span>End year</span><input type="number" min="2018" max="2025" value={filters.endYear ?? 2025} onChange={(event) => set({ endYear: Number(event.target.value) })} /></label>
+        <label><span>Start year</span><input type="number" min={minYear} max={maxYear} value={filters.startYear ?? minYear} onChange={(event) => set({ startYear: Number(event.target.value) })} /></label>
+        <label><span>End year</span><input type="number" min={minYear} max={maxYear} value={filters.endYear ?? maxYear} onChange={(event) => set({ endYear: Number(event.target.value) })} /></label>
       </div>
       <SelectField name="Incident type" value={filters.incidentType} options={options.incidentTypes} onChange={(value) => set({ incidentType: value })} />
       <SelectField name="Risk severity" value={filters.severity} options={options.severities} onChange={(value) => set({ severity: value as IncidentFilters["severity"] })} />

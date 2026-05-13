@@ -11,6 +11,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "api": "tsx server/index.ts",
     "generate:data": "tsx scripts/generate-data.ts",
+    "import:asrs": "tsx scripts/import-asrs.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

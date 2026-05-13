@@ -126,31 +126,46 @@ export function generateIncidents(count = 1250, seed = 20260427): AsrsIncident[]
     const baseAltitude = phase === "taxi" ? 0 : phase === "takeoff" ? 400 : phase === "pattern" ? 1100 : phase === "approach" || phase === "landing" ? 900 : 2500;
     const partial: Omit<AsrsIncident, "narrative" | "extracted_keywords"> = {
       id: `ASRS-SYN-${String(index + 1).padStart(5, "0")}`,
+      reportDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
       report_date: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
       year,
       month,
       state: airport.state,
       region: airport.region,
+      airportCode: airport.code,
       airport_code: airport.code,
+      airportName: airport.name,
       airport_name: airport.name,
       latitude: Number((airport.lat + (rand() - 0.5) * 0.18).toFixed(4)),
       longitude: Number((airport.lon + (rand() - 0.5) * 0.18).toFixed(4)),
+      coordinateConfidence: "medium",
+      coordinateMatchMethod: "synthetic",
+      airportType: airport.type,
       airport_type: airport.type,
       aircraft_type: pick(aircraftTypes, rand),
+      mission: pick(operations, rand),
       operation_type: pick(operations, rand),
+      flightPhase: phase,
       flight_phase: phase,
+      eventType: incident_type,
       incident_type,
       event_category,
+      severityLevel: severity_level,
       severity_level,
       altitude_ft: Math.max(0, Math.round(baseAltitude + rand() * 1800 - 350)),
       weather_condition: pick(weather, rand),
       visibility: pick(visibility, rand),
+      contributingFactors: chosenFactors,
       contributing_factors: chosenFactors,
+      extractedKeywords: [],
+      riskScore: 0,
       risk_score: 0
     };
     partial.risk_score = riskScore(severity_level, event_category, chosenFactors, rand);
+    partial.riskScore = partial.risk_score;
     incidents.push({
       ...partial,
+      extractedKeywords: chosenKeywords,
       extracted_keywords: chosenKeywords,
       narrative: narrative(partial, chosenFactors, chosenKeywords)
     });

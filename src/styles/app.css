@@ -96,6 +96,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .workspace { min-width: 0; padding: 22px; display: grid; gap: 18px; }
 .topbar h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 2.2vw, 2rem); line-height: 1.15; }
+.topbar-subtitle { margin: 5px 0 0; }
 .eyebrow { margin: 0; color: var(--accent); text-transform: uppercase; letter-spacing: 0.13em; font-size: 0.74rem; }
 .actions { display: flex; gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
 
@@ -116,6 +117,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .leaflet-map { min-height: 500px; width: 100%; border-radius: 8px; overflow: hidden; background: #172033; }
 .leaflet-container { font-family: inherit; }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: #111827; color: #e7eef8; }
+.segmented-control { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 8px; padding: 3px; background: var(--panel-2); }
+.segmented-control button { border: 0; padding: 6px 8px; border-radius: 6px; color: var(--muted); background: transparent; text-transform: capitalize; }
+.segmented-control button.active { color: var(--text); background: color-mix(in srgb, var(--accent) 22%, transparent); }
 
 .detail-panel { padding: 18px; min-height: 560px; overflow: auto; }
 .detail-panel h2 { margin: 8px 0 4px; font-size: 1.32rem; }
@@ -126,6 +130,9 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .detail-panel dd { margin: 3px 0 0; font-weight: 700; }
 .detail-panel.empty { display: grid; place-items: center; color: var(--muted); }
 .classification { border-left: 3px solid var(--accent); padding-left: 10px; }
+.associated-list { display: grid; gap: 8px; }
+.associated-list div { display: grid; gap: 3px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--panel-2); }
+.associated-list span { color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
 
 .severity-pill, .severity-dot { display: inline-flex; align-items: center; width: fit-content; border-radius: 999px; padding: 4px 9px; text-transform: uppercase; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.05em; }
 .severity-pill.low, .severity-dot.low { background: rgba(87, 199, 133, 0.18); color: #79e2a2; }
