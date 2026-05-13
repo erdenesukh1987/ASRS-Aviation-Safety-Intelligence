@@ -1,9 +1,10 @@
 import L from "leaflet";
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
-import type { AsrsIncident } from "../data/schema";
+import type { AsrsIncident, MapDisplayMode } from "../data/schema";
 
 type MapMode = "severity" | "heatmap" | "clusters" | "hotspots";
+type EffectiveMapDisplay = MapDisplayMode | "default";
 type ClusterIncident = AsrsIncident & { clusterCount: number; clusterRisk: number; clusterIncidents: AsrsIncident[] };
 
 const severityColor = {
@@ -24,21 +25,31 @@ function MapBounds({ incidents }: { incidents: AsrsIncident[] }) {
   const map = useMap();
   useEffect(() => {
     if (!incidents.length) return;
-    const bounds = L.latLngBounds(incidents.slice(0, 600).map((item) => [item.latitude, item.longitude]));
+    const mapped = incidents.filter((item) => item.latitude !== null && item.longitude !== null);
+    if (!mapped.length) return;
+    const bounds = L.latLngBounds(mapped.slice(0, 600).map((item) => [item.latitude!, item.longitude!]));
     map.fitBounds(bounds.pad(0.18), { animate: false, maxZoom: 7 });
   }, [incidents, map]);
   return null;
 }
 
-function aggregateIncidents(incidents: AsrsIncident[], mode: MapMode) {
+function canDisplayOnMap(incident: AsrsIncident, displayMode: EffectiveMapDisplay = "default") {
+  if (incident.latitude === null || incident.longitude === null) return false;
+  if (displayMode === "exact_only") return incident.coordinateConfidence === "high";
+  if (displayMode === "include_deidentified") return true;
+  if (displayMode === "default") return incident.coordinateConfidence === "high" || incident.coordinateConfidence === "medium";
+  return incident.coordinateConfidence === "high" || incident.coordinateConfidence === "medium" || incident.coordinateConfidence === "low";
+}
+
+function aggregateIncidents(incidents: AsrsIncident[], mode: MapMode, displayMode: EffectiveMapDisplay) {
   const map = new Map<string, ClusterIncident>();
-  for (const incident of incidents) {
-    const clusterLat = Math.round(incident.latitude * 2) / 2;
-    const clusterLon = Math.round(incident.longitude * 2) / 2;
-    const key = mode === "clusters" ? `${clusterLat},${clusterLon}` : incident.airport_code || `${incident.latitude},${incident.longitude}`;
+  for (const incident of incidents.filter((item) => canDisplayOnMap(item, displayMode))) {
+    const clusterLat = Math.round(incident.latitude! * 2) / 2;
+    const clusterLon = Math.round(incident.longitude! * 2) / 2;
+    const key = mode === "clusters" || incident.coordinateConfidence === "low" ? `${clusterLat},${clusterLon}` : incident.airport_code || `${incident.latitude},${incident.longitude}`;
     const current = map.get(key);
     if (!current) {
-      map.set(key, { ...incident, latitude: mode === "clusters" ? clusterLat : incident.latitude, longitude: mode === "clusters" ? clusterLon : incident.longitude, clusterCount: 1, clusterRisk: incident.risk_score, clusterIncidents: [incident] });
+      map.set(key, { ...incident, latitude: mode === "clusters" || incident.coordinateConfidence === "low" ? clusterLat : incident.latitude, longitude: mode === "clusters" || incident.coordinateConfidence === "low" ? clusterLon : incident.longitude, clusterCount: 1, clusterRisk: incident.risk_score, clusterIncidents: [incident] });
     } else {
       current.clusterCount += 1;
       current.clusterRisk += incident.risk_score;
@@ -59,19 +70,23 @@ export function IncidentMap({
   incidents,
   selected,
   onSelect,
-  onAirportSelect
+  onAirportSelect,
+  mapDisplay
 }: {
   incidents: AsrsIncident[];
   selected: AsrsIncident | null;
   onSelect: (incident: AsrsIncident) => void;
   onAirportSelect?: (airportCode: string, incidents: AsrsIncident[]) => void;
+  mapDisplay?: MapDisplayMode | "all";
 }) {
   const [mode, setMode] = useState<MapMode>("severity");
+  const displayMode: EffectiveMapDisplay = mapDisplay && mapDisplay !== "all" ? mapDisplay : "default";
   const frequency = new Map<string, number>();
   incidents.forEach((incident) => frequency.set(incident.airport_code, (frequency.get(incident.airport_code) ?? 0) + 1));
-  const clustered = useMemo(() => aggregateIncidents(incidents, mode), [incidents, mode]);
+  const clustered = useMemo(() => aggregateIncidents(incidents, mode, displayMode), [incidents, mode, displayMode]);
+  const severityIncidents = incidents.filter((incident) => canDisplayOnMap(incident, displayMode));
   const mapIncidents = mode === "severity"
-    ? incidents
+    ? severityIncidents
     : mode === "hotspots"
       ? clustered.filter((incident) => !isGenericAirportCode(incident.airport_code) && incident.coordinateConfidence !== "low").slice(0, 75)
       : clustered;
@@ -80,8 +95,8 @@ export function IncidentMap({
     <div className="map-panel">
       <div className="panel-title">
         <div>
-          <strong>U.S. ASRS Incident Map</strong>
-          <span>{incidents.length.toLocaleString()} filtered reports, {mode === "severity" ? "markers colored by severity" : mode === "heatmap" ? "heat intensity by airport report volume" : mode === "hotspots" ? "top airport hotspots by report count" : "nearby incidents clustered by coordinates"}</span>
+          <strong>Mappable ASRS Report Locations</strong>
+          <span>{mapIncidents.length.toLocaleString()} mappable reports shown from {incidents.length.toLocaleString()} filtered reports</span>
         </div>
         <div className="segmented-control" aria-label="Map mode">
           {(["severity", "heatmap", "clusters", "hotspots"] as const).map((item) => (
@@ -102,12 +117,12 @@ export function IncidentMap({
           return (
             <CircleMarker
               key={incident.id}
-              center={[incident.latitude, incident.longitude]}
+              center={[incident.latitude!, incident.longitude!]}
               radius={active ? 13 : Math.min(mode === "severity" ? 12 : mode === "hotspots" ? 30 : 24, 4 + Math.sqrt(clusterCount) * (mode === "severity" ? 1 : 2.2))}
               pathOptions={{
                 color: active ? "#ffffff" : color,
                 fillColor: color,
-                fillOpacity: mode === "heatmap" ? 0.48 : active ? 0.96 : 0.68,
+                fillOpacity: incident.coordinateConfidence === "medium" ? 0.42 : mode === "heatmap" ? 0.48 : active ? 0.96 : 0.68,
                 weight: active ? 3 : 1
               }}
               eventHandlers={{ click: () => {
@@ -129,6 +144,7 @@ export function IncidentMap({
           );
         })}
       </MapContainer>
+      <p className="map-disclaimer">Some ASRS records are de-identified or generalized and cannot be mapped to exact airport locations.</p>
     </div>
   );
 }

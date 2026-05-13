@@ -79,9 +79,9 @@ app.get("/api/asrs/insights", (req, res) => {
 
 function aggregateHeatmap(incidents: AsrsIncident[], groupBy: "airport" | "state" | "cluster") {
   const cells = new Map<string, HeatmapCell>();
-  for (const incident of incidents) {
-    const clusterLat = Math.round(incident.latitude * 2) / 2;
-    const clusterLon = Math.round(incident.longitude * 2) / 2;
+  for (const incident of incidents.filter((item) => item.latitude !== null && item.longitude !== null)) {
+    const clusterLat = Math.round(incident.latitude! * 2) / 2;
+    const clusterLon = Math.round(incident.longitude! * 2) / 2;
     const key = groupBy === "state"
       ? incident.state
       : groupBy === "cluster"
@@ -92,8 +92,8 @@ function aggregateHeatmap(incidents: AsrsIncident[], groupBy: "airport" | "state
       airportCode: incident.airport_code,
       airportName: groupBy === "state" ? `${incident.state} statewide` : groupBy === "cluster" ? `Cluster ${clusterLat}, ${clusterLon}` : incident.airport_name,
       state: incident.state || key,
-      latitude: groupBy === "cluster" ? clusterLat : incident.latitude,
-      longitude: groupBy === "cluster" ? clusterLon : incident.longitude,
+      latitude: groupBy === "cluster" ? clusterLat : incident.latitude!,
+      longitude: groupBy === "cluster" ? clusterLon : incident.longitude!,
       count: 0,
       highRisk: 0,
       ctafEvents: 0,

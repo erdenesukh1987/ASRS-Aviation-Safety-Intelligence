@@ -2,6 +2,7 @@ import { Download, FileText, Moon, Radar, Search, Sun } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AnalyticsCharts } from "./components/AnalyticsCharts";
 import { DataTable } from "./components/DataTable";
+import { DataQualitySummary } from "./components/DataQualitySummary";
 import { DetailPanel } from "./components/DetailPanel";
 import { FilterSidebar } from "./components/FilterSidebar";
 import { IncidentMap } from "./components/IncidentMap";
@@ -76,7 +77,7 @@ export function App() {
           <div>
             <p className="eyebrow">Data Source: {dataSource}</p>
             <h1>ASRS Aviation Safety Intelligence Dashboard</h1>
-            <p className="muted topbar-subtitle">{loading ? "Loading historical ASRS reports..." : "Historical analysis of reported General Aviation safety events near non-towered and uncontrolled airport environments."}</p>
+            <p className="muted topbar-subtitle">{loading ? "Loading historical ASRS reports..." : "Historical analysis of reported General Aviation safety events near non-towered and uncontrolled operating environments."}</p>
           </div>
           <div className="actions">
             <button onClick={() => setDark((value) => !value)} title="Toggle theme">
@@ -110,11 +111,13 @@ export function App() {
             incidents={filtered}
             selected={selectedIncident}
             onSelect={setSelected}
+            mapDisplay={filters.mapDisplay}
             onAirportSelect={(_airportCode, rows) => setAssociatedIncidents(rows)}
           />
           <DetailPanel incident={selectedIncident} associatedIncidents={detailAssociated} />
         </section>
 
+        <DataQualitySummary incidents={incidents} />
         <ResearchInsights incidents={filtered} />
         <AnalyticsCharts stats={stats} incidents={filtered} />
         <DataTable
@@ -124,6 +127,7 @@ export function App() {
           onExportSelected={(rows) => downloadText("asrs-selected-incidents.csv", incidentsToCsv(rows), "text/csv")}
         />
       </main>
+      <footer className="footer-disclaimer">ASRS reports are voluntary self-reported safety narratives and do not represent official accident statistics.</footer>
     </div>
   );
 }

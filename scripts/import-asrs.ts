@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
-import type { AirportType, AsrsIncident, FlightPhase, OperationType, SeverityLevel } from "../src/data/schema";
+import type { AirportType, AsrsIncident, FlightPhase, OperatingEnvironment, OperationType, SeverityLevel } from "../src/data/schema";
 
 type CsvRecord = Record<string, string>;
 type AirportRef = {
@@ -224,11 +224,13 @@ function fuzzyAirportMatch(index: AirportIndex, query: string, state: string) {
 }
 
 function resolveAirport(index: AirportIndex, code: string, locale: string, narrative: string, state: string) {
+  if (/^Z{3,4}$/i.test(code)) return { airport: undefined, confidence: "unknown" as const, method: "state_centroid" as const, locationStatus: "deidentified_location" as const };
   const codeMatch = findAirportByCode(index, code, state);
-  if (codeMatch) return { airport: codeMatch, confidence: "high" as const, method: "code" as const };
+  if (codeMatch) return { airport: codeMatch, confidence: "high" as const, method: "code" as const, locationStatus: "exact_airport_match" as const };
   const fuzzyMatch = fuzzyAirportMatch(index, locationSearchText(locale, narrative), state);
-  if (fuzzyMatch) return { airport: fuzzyMatch, confidence: "medium" as const, method: "fuzzy_name" as const };
-  return { airport: undefined, confidence: "low" as const, method: "state_centroid" as const };
+  if (fuzzyMatch) return { airport: fuzzyMatch, confidence: "medium" as const, method: "fuzzy_name" as const, locationStatus: "airport_name_match" as const };
+  if (stateCentroids[state]) return { airport: undefined, confidence: "low" as const, method: "state_centroid" as const, locationStatus: "state_fallback" as const };
+  return { airport: undefined, confidence: "unknown" as const, method: "state_centroid" as const, locationStatus: "unknown_location" as const };
 }
 
 function classifyAirportType(text: string): AirportType {
@@ -237,6 +239,17 @@ function classifyAirportType(text: string): AirportType {
   if (/\bCTAF\b|\bUNICOM\b/i.test(text)) return "non_towered";
   if (/\btower\b|\bground\s+control\b/i.test(text)) return "towered";
   return "unknown";
+}
+
+function inferOperatingEnvironment(text: string): OperatingEnvironment {
+  if (/\bZZZ+\b|de-?identified|unknown/i.test(text)) return "Unknown / De-identified";
+  if (/\bclass\s+d\b/i.test(text)) return "Class D";
+  if (/\bclass\s+e\b/i.test(text)) return "Class E";
+  if (/\bclass\s+g\b/i.test(text)) return "Class G";
+  if (/\bCTAF\b|non[-\s]?towered/i.test(text)) return "CTAF / Non-towered";
+  if (/\bUNICOM\b|\buncontrolled\b/i.test(text)) return "UNICOM / Uncontrolled";
+  if (/\btower\b|\bground\s+control\b|\bATC\b|\bTRACON\b/i.test(text)) return "Tower / ATC-involved";
+  return "Unknown / De-identified";
 }
 
 function normalizeMission(value: string): OperationType {
@@ -380,17 +393,27 @@ async function main() {
     const airportMatch = resolveAirport(airportRefs, airportCode, locale, narrative, state);
     const airportRef = airportMatch.airport;
     const stateRef = stateCentroids[state] ?? { latitude: 39.5, longitude: -98.35, region: "Unknown" };
-    const latitude = airportRef?.latitude ?? stateRef.latitude;
-    const longitude = airportRef?.longitude ?? stateRef.longitude;
+    const latitude = airportMatch.locationStatus === "deidentified_location" || airportMatch.locationStatus === "unknown_location" ? null : airportRef?.latitude ?? stateRef.latitude;
+    const longitude = airportMatch.locationStatus === "deidentified_location" || airportMatch.locationStatus === "unknown_location" ? null : airportRef?.longitude ?? stateRef.longitude;
     const coordinateConfidence = airportMatch.confidence;
     const missionRaw = first(rawFields, ["aircraft_1_mission", "aircraft_2_mission"]);
-    const flightPhase = normalizePhase(first(rawFields, ["aircraft_1_flight_phase", "aircraft_2_flight_phase"]) || narrative);
+    const flightPhaseRaw = first(rawFields, ["aircraft_1_flight_phase", "aircraft_2_flight_phase"]);
+    const flightPhase = normalizePhase(flightPhaseRaw || narrative);
     const anomaly = first(rawFields, ["events_anomaly"]);
+    const primaryProblem = first(rawFields, ["assessments_primary_problem"]);
+    const flightConditions = first(rawFields, ["environment_flight_conditions"]);
+    const lightCondition = first(rawFields, ["environment_light"]);
+    const airspace = first(rawFields, ["aircraft_1_airspace", "aircraft_2_airspace"]);
+    const atcAdvisory = advisory || first(rawFields, ["aircraft_1_atc_advisory", "aircraft_2_atc_advisory"]);
+    const detector = first(rawFields, ["events_detector"]);
+    const result = first(rawFields, ["events_result"]);
     const eventType = classifyEvent(anomaly, narrative, synopsis);
     const extractedKeywords = extractKeywords(`${anomaly} ${synopsis} ${narrative}`);
     const factors = contributingFactors(rawFields, narrative);
     const risk = scoreRisk(eventType, factors, narrative);
-    const airportType = classifyAirportType(`${locale} ${advisory} ${narrative}`);
+    const environmentText = `${locale} ${atcAdvisory} ${airspace} ${narrative}`;
+    const airportType = classifyAirportType(environmentText);
+    const operatingEnvironment = inferOperatingEnvironment(environmentText);
 
     return {
       id: first(rawFields, ["acn"]) || `ASRS-${index + 1}`,
@@ -408,6 +431,8 @@ async function main() {
       longitude,
       coordinateConfidence,
       coordinateMatchMethod: airportMatch.method,
+      locationStatus: airportMatch.locationStatus,
+      operatingEnvironment,
       airportType,
       airport_type: airportType,
       aircraft_type: first(rawFields, ["aircraft_1_make_model_name", "aircraft_2_make_model_name"]) || "Unknown",
@@ -418,10 +443,17 @@ async function main() {
       eventType,
       incident_type: eventType,
       event_category: eventCategory(eventType, extractedKeywords),
+      primaryProblem,
       severityLevel: risk.severity,
       severity_level: risk.severity,
       altitude_ft: Number(first(rawFields, ["place_altitude_msl_single_value", "place_altitude_agl_single_value"])) || 0,
-      weather_condition: first(rawFields, ["environment_flight_conditions"]) || "Unknown",
+      weather_condition: flightConditions || "Unknown",
+      flightConditions: flightConditions || "Unknown",
+      lightCondition: lightCondition || "Unknown",
+      airspace: airspace || "Unknown",
+      atcAdvisory: atcAdvisory || "Unknown",
+      detector: detector || "Unknown",
+      result: result || "Unknown",
       visibility: first(rawFields, ["environment_weather_elements_visibility"]) || "Unknown",
       contributingFactors: factors,
       contributing_factors: factors,

@@ -15,9 +15,10 @@ export function DetailPanel({ incident, associatedIncidents = [] }: { incident: 
         <div><dt>Phase</dt><dd>{incident.flight_phase}</dd></div>
         <div><dt>Aircraft</dt><dd>{incident.aircraft_type}</dd></div>
         <div><dt>Altitude</dt><dd>{incident.altitude_ft.toLocaleString()} ft</dd></div>
-        <div><dt>Airport type</dt><dd>{incident.airport_type.replaceAll("_", " ")}</dd></div>
+        <div><dt>Operating environment</dt><dd>{incident.operatingEnvironment ?? "Unknown / De-identified"}</dd></div>
         <div><dt>Risk score</dt><dd>{incident.risk_score}/100</dd></div>
-        <div><dt>Coordinate confidence</dt><dd>{incident.coordinateConfidence ?? "low"}</dd></div>
+        <div><dt>Coordinate confidence</dt><dd>{incident.coordinateConfidence ?? "unknown"}</dd></div>
+        <div><dt>Location status</dt><dd>{(incident.locationStatus ?? "unknown_location").replaceAll("_", " ")}</dd></div>
       </dl>
       <h3>Contributing factors</h3>
       <div className="tag-list">{incident.contributing_factors.map((factor) => <span key={factor}>{factor}</span>)}</div>

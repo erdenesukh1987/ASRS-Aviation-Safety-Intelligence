@@ -24,7 +24,7 @@ The system is designed for historical incident analysis, safety intelligence, an
 
 ## Features
 
-- Interactive U.S. incident map for historical ASRS reports
+- Interactive U.S. map for historical ASRS reports with coordinate-confidence handling
 - Heatmap visualization by airport, state, and coordinate cluster
 - Airport hotspot analysis with known-airport ranking
 - Flight phase filtering and trend exploration
@@ -33,6 +33,7 @@ The system is designed for historical incident analysis, safety intelligence, an
 - Narrative keyword extraction from ASRS report text
 - Historical incident trend summaries
 - Airport clustering and nearby incident grouping
+- Data quality summary for exact, fuzzy, approximate, de-identified, and unmapped records
 - Research-oriented analytics, KPIs, charts, filters, and export workflows
 
 ## Architecture
@@ -42,10 +43,12 @@ flowchart LR
     A["ASRS CSV exports<br/>data/raw/ASRS_DBOnline.csv"] --> B["Local ingestion pipeline<br/>scripts/import-asrs.ts"]
     C["OurAirports reference<br/>data/reference/airports.csv"] --> B
     B --> D["Field normalization<br/>date, airport, phase, mission, event, narrative"]
-    D --> E["Airport coordinate mapping<br/>ICAO, FAA/IATA, fuzzy name, state centroid"]
-    E --> F["Processed JSON datasets<br/>data/processed and server/data"]
-    F --> G["Express API layer<br/>incidents, stats, heatmap, hotspots, airport drilldown"]
+    D --> E["Coordinate confidence<br/>exact, fuzzy, state fallback, de-identified"]
+    E --> F["Processed JSON datasets<br/>data/processed, server/data, public/data"]
+    F --> G["Static frontend data<br/>/data/asrs_incidents.json"]
+    F --> I["Local Express API<br/>development only"]
     G --> H["React/Vite dashboard<br/>map, filters, charts, insights"]
+    I --> H
 ```
 
 The project uses a local-first research workflow:
@@ -54,9 +57,9 @@ The project uses a local-first research workflow:
 ASRS CSV exports
   -> local ingestion pipeline
   -> normalized incident schema
-  -> airport coordinate mapping
+  -> airport coordinate mapping and de-identified location handling
   -> processed JSON
-  -> API layer
+  -> static frontend data
   -> React visualization dashboard
 ```
 
@@ -72,6 +75,7 @@ Important ASRS interpretation notes:
 - The dataset does not represent official accident or incident statistics.
 - Report counts reflect reporting patterns as well as operational safety concerns.
 - The dashboard visualizes reported safety concern patterns, not live aircraft activity.
+- De-identified locations such as `ZZZ` and `ZZZZ` are not assigned invented coordinates.
 
 ### OurAirports
 
@@ -93,6 +97,15 @@ Each processed incident includes `coordinateConfidence`:
 - `high`: code-based airport match
 - `medium`: fuzzy airport-name match
 - `low`: fallback coordinate, usually state centroid or unresolved location
+- `unknown`: de-identified or unmappable location
+
+Each processed incident also includes `locationStatus`:
+
+- `exact_airport_match`
+- `airport_name_match`
+- `state_fallback`
+- `deidentified_location`
+- `unknown_location`
 
 ## Installation
 
@@ -149,7 +162,7 @@ server/data/asrs_incidents.json
 public/data/asrs_incidents.json
 ```
 
-Synthetic sample generation remains available only as a fallback/demo utility:
+Synthetic sample generation remains available only as a fallback/demo utility. It should not be used for the deployed research demo when processed ASRS data is available:
 
 ```bash
 npm run generate:data
@@ -169,13 +182,13 @@ The Express API serves historical ASRS-derived data and dashboard summaries.
 - `GET /api/asrs/airport/:code`
 - `GET /api/asrs/export`
 
-Supported filters include:
+Supported filters include primary ASRS analysis fields and secondary context fields:
 
 ```text
-year, startYear, endYear, incidentType, severity, aircraftType,
-flightPhase, state, airportType, altitudeMin, altitudeMax, keyword,
-weather, visibility, operationType, eventCategory, contributingFactor,
-airportCode
+year, startYear, endYear, operationType, flightPhase, eventType,
+severity, primaryProblem, keyword, flightConditions, lightCondition,
+airspace, atcAdvisory, aircraftType, detector, result,
+operatingEnvironment, coordinateConfidence, mapDisplay, state
 ```
 
 ## Project Structure
@@ -184,6 +197,7 @@ airportCode
 data/raw/                  Local ASRS CSV exports
 data/reference/            Airport reference datasets
 data/processed/            Normalized historical ASRS JSON output
+public/data/               Static JSON consumed by Vercel/frontend deployment
 server/                    Express API layer
 server/data/               API-ready processed datasets
 scripts/import-asrs.ts     Real ASRS ingestion and normalization pipeline
@@ -243,7 +257,7 @@ This dashboard is intended for research and visualization purposes only. It shou
 
 - ADS-B integration for post-hoc trajectory enrichment
 - Historical trajectory analysis and replay workflows
-- Real-time conflict detection as a separate future research track
+- Operational conflict-detection research as a separate future track using appropriate surveillance data
 - NLP-based risk classification and topic modeling
 - Aviation data fusion framework across ASRS, ADS-B, weather, and airport metadata
 - Surveillance gap analysis for non-towered and uncontrolled airport environments
